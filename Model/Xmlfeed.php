@@ -29,7 +29,6 @@ class Xmlfeed
         \Magefox\GoogleShopping\Helper\Data $helper,
         \Magefox\GoogleShopping\Helper\Products $productFeedHelper,
         \Magento\Store\Model\StoreManagerInterface $storeManager
-
     ) {
         $this->_helper = $helper;
         $this->_productFeedHelper = $productFeedHelper;
@@ -42,6 +41,11 @@ class Xmlfeed
         $xml .= $this->getProductsXml();
         $xml .= $this->getXmlFooter();
 
+//        $writer = new \Zend\Log\Writer\Stream(BP . '/var/log/googlexmlfeed.log');
+//        $logger = new \Zend\Log\Logger();
+//        $logger->addWriter($writer);
+//        $logger->info($xml);
+
         return $xml;
     }
 
@@ -49,7 +53,7 @@ class Xmlfeed
     {
 
         header("Content-Type: application/xml; charset=utf-8");
-
+        
         $xml =  '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">';
         $xml .= '<channel>';
         $xml .= '<title>'.$this->_helper->getConfig('google_default_title').'</title>';
@@ -90,14 +94,14 @@ class Xmlfeed
             $this->_productFeedHelper->getProductValue($product, 'google_product_category'), true);
         $xml .= $this->createNode("g:availability", 'in stock');
         $xml .= $this->createNode('g:price', number_format($product->getFinalPrice(),2,'.','').' '.$this->_productFeedHelper->getCurrentCurrencySymbol());
-        if ($product->getSpecialPrice() != $product->getFinalPrice())
+        if ($product->getSpecialPrice() && $product->getSpecialPrice() != $product->getFinalPrice())
             $xml .= $this->createNode('g:sale_price', number_format($product->getSpecialPrice(),2,'.','').' '.$this->_productFeedHelper->getCurrentCurrencySymbol());
-        $_condition = $product->getAttributeText('condition');
-        if (is_array($_condition))
-            $xml .= $this->createNode("g:condition", $_condition[0]);
-        else
-            $xml .= $this->createNode("g:condition", $_condition);
-        $xml .= $this->createNode("g:gtin", $product->getAttributeText('gr_ean'));
+//        $_condition = $product->getAttributeText('condition');
+//        if (is_array($_condition))
+//            $xml .= $this->createNode("g:condition", $_condition[0]);
+//        else
+//            $xml .= $this->createNode("g:condition", $_condition);
+        $xml .= $this->createNode("g:gtin", $product->getAttributeText('gtin'));
         $xml .= $this->createNode("g:id", $product->getId());
         $xml .= $this->createNode("g:brand", $product->getAttributeText('manufacturer'));
         $xml .= $this->createNode("g:mpn", $product->getSku());
