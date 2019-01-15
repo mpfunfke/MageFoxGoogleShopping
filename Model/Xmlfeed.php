@@ -53,8 +53,9 @@ class Xmlfeed
     {
 
         header("Content-Type: application/xml; charset=utf-8");
-        
-        $xml =  '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">';
+
+        $xml =  '<?xml version="1.0" encoding="utf-8"?>';
+        $xml .= '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">';
         $xml .= '<channel>';
         $xml .= '<title>'.$this->_helper->getConfig('google_default_title').'</title>';
         $xml .= '<link>'.$this->_helper->getConfig('google_default_url').'</link>';
@@ -88,23 +89,24 @@ class Xmlfeed
         $xml = $this->createNode("title", $product->getName(), true);
         $xml .= $this->createNode("link", $product->getProductUrl());
         $xml .= $this->createNode("description", $_description, true);
+        // @Todo: Produktkategorie integrieren z.B. Startseite > Damen > Kleider > Maxikleider
         $xml .= $this->createNode("g:product_type", $this->_productFeedHelper->getAttributeSet($product), true);
         $xml .= $this->createNode("g:image_link", $this->_storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA, true).'catalog/product'.$product->getImage());
+        // Alle Produkte im Shop sind bisher Kleidung
         $xml .= $this->createNode('g:google_product_category',
-            $this->_productFeedHelper->getProductValue($product, 'google_product_category'), true);
+            'Bekleidung & Accessoires > ' . $product->getAttributeText('product_type'), true);
         $xml .= $this->createNode("g:availability", 'in stock');
         $xml .= $this->createNode('g:price', number_format($product->getFinalPrice(),2,'.','').' '.$this->_productFeedHelper->getCurrentCurrencySymbol());
         if ($product->getSpecialPrice() && $product->getSpecialPrice() != $product->getFinalPrice())
             $xml .= $this->createNode('g:sale_price', number_format($product->getSpecialPrice(),2,'.','').' '.$this->_productFeedHelper->getCurrentCurrencySymbol());
-//        $_condition = $product->getAttributeText('condition');
-//        if (is_array($_condition))
-//            $xml .= $this->createNode("g:condition", $_condition[0]);
-//        else
-//            $xml .= $this->createNode("g:condition", $_condition);
-        $xml .= $this->createNode("g:gtin", $product->getAttributeText('gtin'));
+        $xml .= $this->createNode("g:gtin", $product->getGtin());
         $xml .= $this->createNode("g:id", $product->getId());
-        $xml .= $this->createNode("g:brand", $product->getAttributeText('manufacturer'));
+        $xml .= $this->createNode("g:brand", 'Alife and Kickin');
         $xml .= $this->createNode("g:mpn", $product->getSku());
+        if ($color = $product->getAttributeText('color'))
+            $xml .= $this->createNode("g:color", $color);
+        if ($gender = $product->getAttributeText('gender') && $product->getAttributeText('gender') != 'Kinder')
+            $xml .= $this->createNode('g:gender', $gender == 'Damen' ? 'female' : 'male');
 
         return $xml;
     }

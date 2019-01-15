@@ -56,6 +56,7 @@ class Products extends \Magento\Framework\App\Helper\AbstractHelper
     public function getFilteredProducts()
     {
         $collection = $this->_productCollectionFactory->create();
+        $collection->addAttributeToSelect('*');
         // $collection->addAttributeToFilter('status',\Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED);
         $collection->addAttributeToFilter('status', ['in' => $this->_productStatus->getVisibleStatusIds()]);
         $collection->setVisibility($this->_productVisibility->getVisibleInSiteIds());
