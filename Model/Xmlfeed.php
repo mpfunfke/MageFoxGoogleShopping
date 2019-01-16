@@ -25,6 +25,8 @@ class Xmlfeed
      */
     private $_storeManager;
 
+    private $_cachedParent;
+
     public function __construct(
         \Magefox\GoogleShopping\Helper\Data $helper,
         \Magefox\GoogleShopping\Helper\Products $productFeedHelper,
@@ -83,18 +85,24 @@ class Xmlfeed
         return $xml;
     }
 
-    public function buildProductXml($product)
+    public function buildProductXml($product, $isRecursion = false)
     {
-        $_description = $this->fixDescription($product->getDescription());
+        $prod = $isRecursion ? $this->_cachedParent : $product;
+
+        $_description = $this->fixDescription($prod->getDescription());
         $xml = $this->createNode("title", $product->getName(), true);
-        $xml .= $this->createNode("link", $product->getProductUrl());
+        $xml .= $this->createNode("link", $prod->getProductUrl());
         $xml .= $this->createNode("description", $_description, true);
+
         // @Todo: Produktkategorie integrieren z.B. Startseite > Damen > Kleider > Maxikleider
-        $xml .= $this->createNode("g:product_type", $this->_productFeedHelper->getAttributeSet($product), true);
-        $xml .= $this->createNode("g:image_link", $this->_storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA, true).'catalog/product'.$product->getImage());
+        $xml .= $this->createNode("g:product_type", $this->_productFeedHelper->getCategoryNames($product), true);
+
+        if (!$isRecursion)
+            $xml .= $this->createNode("g:image_link", $this->_storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA, true).'catalog/product'.$product->getImage());
+
         // Alle Produkte im Shop sind bisher Kleidung
         $xml .= $this->createNode('g:google_product_category',
-            'Bekleidung & Accessoires > ' . $product->getAttributeText('product_type'), true);
+            'Bekleidung & Accessoires > ' . $prod->getAttributeText('product_type'), true);
         $xml .= $this->createNode("g:availability", 'in stock');
         $xml .= $this->createNode('g:price', number_format($product->getFinalPrice(),2,'.','').' '.$this->_productFeedHelper->getCurrentCurrencySymbol());
         if ($product->getSpecialPrice() && $product->getSpecialPrice() != $product->getFinalPrice())
@@ -107,6 +115,28 @@ class Xmlfeed
             $xml .= $this->createNode("g:color", $color);
         if ($gender = $product->getAttributeText('gender') && $product->getAttributeText('gender') != 'Kinder')
             $xml .= $this->createNode('g:gender', $gender == 'Damen' ? 'female' : 'male');
+
+        // Überprüfe ob Elternartikel
+        if ('configurable' == $product->getTypeId() && !$isRecursion) {
+            $this->_cachedParent = $product;
+            $xml .= $this->createNode("g:item_group_id", $product->getSku());
+            $xml .= "</item>";
+            $children = $product->getTypeInstance()->getUsedProducts($product);
+            $c = count($children);
+            $i = 1;
+            // baue Kinder XML
+            foreach ($children as $child) {
+                $xml .= "<item>";
+                $xml .= $this->buildProductXml($child, true);
+                $xml .= $this->createNode("g:item_group_id", $product->getSku());
+                if ($i != $c)
+                    $xml .= "</item>";
+                $i++;
+            }
+        }
+        if ($isRecursion) {
+            $xml .= $this->createNode("g:size", $product->getAttributeText('size'));
+        }
 
         return $xml;
     }
